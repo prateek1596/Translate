@@ -32,32 +32,3 @@
     "whatwg-fetch": "^3.6.2"
   }
 }
-{
-  "name": "active-language-translator",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint . --max-warnings 0",
-    "test": "vitest",
-    "test:watch": "vitest --watch"
-  },
-  "devDependencies": {
-    "@types_node": "^22.15.29",
-    "@types.react": "^19.0.12",
-    "@types.react-dom": "^19.0.5",
-    "eslint": "^9.24.0",
-    "eslint-config-next": "^15.3.1",
-    "prisma": "^6.9.0",
-    "typescript": "^5.8.3"
-  }
-}
-    "eslint": "^9.24.0",
-    "eslint-config-next": "^15.3.1",
-    "prisma": "^6.9.0",
-    "typescript": "^5.8.3"
-  }
-  }
-}
