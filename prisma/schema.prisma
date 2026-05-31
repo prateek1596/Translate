@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  email               String?              @unique
+  displayName         String?
+  preferredSourceLang  String?              @db.VarChar(64)
+  preferredTargetLang  String?              @db.VarChar(64)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  translationSessions TranslationSession[]
+}
+
+model TranslationSession {
+  id          String              @id @default(cuid())
+  userId      String?
+  user        User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  sourceLang  String               @db.VarChar(64)
+  targetLang  String               @db.VarChar(64)
+  status      TranslationStatus    @default(ACTIVE)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  messages    TranslationMessage[]
+
+  @@index([userId, createdAt])
+  @@index([targetLang, createdAt])
+}
+
+model TranslationMessage {
+  id            String             @id @default(cuid())
+  sessionId     String
+  session       TranslationSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sourceText    String             @db.Text
+  translatedText String            @db.Text
+  provider      String             @db.VarChar(64)
+  sourceLang    String             @db.VarChar(64)
+  targetLang    String             @db.VarChar(64)
+  latencyMs    Int?
+  createdAt    DateTime           @default(now())
+
+  @@index([sessionId, createdAt])
+}
+
+enum TranslationStatus {
+  ACTIVE
+  COMPLETED
+  ERROR
+}
