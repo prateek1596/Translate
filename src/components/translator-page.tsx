@@ -479,6 +479,15 @@ export function TranslatorPage() {
                 <div key={`${index}-${item.translated.slice(0, 24)}`} className="translation-item">
                   <span className="label">Segment {index + 1}</span>
                   <p>{item.translated}</p>
+                  <div className="translation-actions">
+                    <button
+                      type="button"
+                      className="button button-secondary"
+                      onClick={() => navigator.clipboard?.writeText(item.translated)}
+                    >
+                      Copy
+                    </button>
+                  </div>
                 </div>
               ))
             ) : (
