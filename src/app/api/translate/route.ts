@@ -17,52 +17,72 @@ export async function POST(request: NextRequest) {
     const payload = translateRequestSchema.parse(await request.json());
     const startedAt = performance.now();
 
-    const session = payload.sessionId
-      ? await prisma.translationSession.upsert({
-          where: { id: payload.sessionId },
-          update: {
-            sourceLang: payload.sourceLanguage,
-            targetLang: payload.targetLanguage,
-            status: "ACTIVE"
-          },
-          create: {
-            id: payload.sessionId,
-            sourceLang: payload.sourceLanguage,
-            targetLang: payload.targetLanguage,
-            status: "ACTIVE"
-          }
-        })
-      : await prisma.translationSession.create({
-          data: {
-            sourceLang: payload.sourceLanguage,
-            targetLang: payload.targetLanguage,
-            status: "ACTIVE"
-          }
-        });
+    const hasDb = Boolean(process.env.DATABASE_URL);
+
+    let session: { id: string } & Partial<any>;
+    let usedDb = false;
+
+    if (hasDb) {
+      try {
+        session = payload.sessionId
+          ? await prisma.translationSession.upsert({
+              where: { id: payload.sessionId },
+              update: {
+                sourceLang: payload.sourceLanguage,
+                targetLang: payload.targetLanguage,
+                status: "ACTIVE"
+              },
+              create: {
+                id: payload.sessionId,
+                sourceLang: payload.sourceLanguage,
+                targetLang: payload.targetLanguage,
+                status: "ACTIVE"
+              }
+            })
+          : await prisma.translationSession.create({
+              data: {
+                sourceLang: payload.sourceLanguage,
+                targetLang: payload.targetLanguage,
+                status: "ACTIVE"
+              }
+            });
+        usedDb = true;
+      } catch (prismaError) {
+        // If Prisma fails (invalid credentials, etc.), fall back to an in-memory session
+        // and proceed without persisting to the database.
+        // eslint-disable-next-line no-console
+        console.warn("Prisma unavailable, falling back to in-memory session:", prismaError?.message ?? prismaError);
+        session = payload.sessionId ? { id: payload.sessionId } : { id: `local-${Date.now()}` };
+      }
+    } else {
+      session = payload.sessionId ? { id: payload.sessionId } : { id: `local-${Date.now()}` };
+    }
 
     const result = await translateText(payload as any);
     const latencyMs = Math.max(0, Math.round(performance.now() - startedAt));
 
-    await prisma.translationMessage.create({
-      data: {
-        sessionId: session.id,
-        sourceText: payload.text,
-        translatedText: result.translatedText,
-        provider: result.provider,
-        sourceLang: payload.sourceLanguage,
-        targetLang: payload.targetLanguage,
-        latencyMs
-      }
-    });
+    if (usedDb) {
+      await prisma.translationMessage.create({
+        data: {
+          sessionId: session.id,
+          sourceText: payload.text,
+          translatedText: result.translatedText,
+          provider: result.provider,
+          sourceLang: payload.sourceLanguage,
+          targetLang: payload.targetLanguage,
+          latencyMs
+        }
+      });
 
-    await prisma.translationSession.update({
-      where: { id: session.id },
-      data: {
-        sourceLang: payload.sourceLanguage,
-        targetLang: payload.targetLanguage,
-        status: "ACTIVE"
-      }
-    });
+      await prisma.translationSession.update({
+        where: { id: session.id },
+        data: {
+          sourceLang: payload.sourceLanguage,
+          targetLang: payload.targetLanguage,
+          status: "ACTIVE"
+        }
+      });
+    }
 
     return NextResponse.json({
       sessionId: session.id,
